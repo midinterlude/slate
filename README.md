@@ -102,6 +102,11 @@ The log includes console history, command outputs, file operations, and error me
 - **Administrator privileges required**
 - **Backup important data** before running
 - **Use at your own risk**
+
+## ⚠️ Warning
+
+- **Make sure** to log out of any roblox accounts on your browser
+- **Clear your browsers's cookies** before running this application.
  
 ## 🐛 Troubleshooting
  
