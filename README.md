@@ -4,6 +4,9 @@ A packaged executable version of skidcleaner, a powerful tool for cleaning Roblo
 
 ![Configuration UI](https://i.imgur.com/mSxITiW)
 
+
+<img src="https://i.imgur.com/mSxITiW.png" alt="config ui">
+
  
 ## 🚀 Quick Start
  
