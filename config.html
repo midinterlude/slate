@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roblox Cleaner - Configuration Manager</title>
+    <title>Slate - Configuration Manager</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -656,7 +656,7 @@
             border: 1px solid var(--border-secondary);
         }
 
-        .skidcleaner-preview {
+        .slate-preview {
             background: linear-gradient(135deg, #0a0a0a 0%, #151515 50%, #dc143c 100%);
         }
 
@@ -789,8 +789,20 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1><i class="fas fa-broom"></i> skidcleaner.</h1>
-            <p>Advanced Configuration Manager</p>
+            <pre style="font-family: monospace; font-size: 1rem; line-height: 1; color: var(--text-primary); white-space: pre; text-align: left;">
+▐▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▌
+▐     ▄████████  ▄█          ▄████████     ███        ▄████████  ▌
+▐    ███    ███ ███         ███    ███ ▀█████████▄   ███    ███  ▌
+▐    ███    █▀  ███         ███    ███    ▀███▀▀██   ███    █▀   ▌
+▐    ███        ███         ███    ███     ███   ▀  ▄███▄▄▄      ▌
+▐  ▀███████████ ███       ▀███████████     ███     ▀▀███▀▀▀      ▌
+▐           ███ ███         ███    ███     ███       ███    █▄   ▌
+▐     ▄█    ███ ███▌    ▄   ███    ███     ███       ███    ███  ▌
+▐   ▄████████▀  █████▄▄██   ███    █▀     ▄████▀     ██████████  ▌
+▐               ▀                                                ▌
+▐▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▌
+            </pre>
+            <p style="text-align: left;">Advanced Configuration Web Interface - by midinterlude (on discord)</p>
         </div>
 
         <div class="main-content">
@@ -839,6 +851,11 @@
                     <i class="fas fa-save"></i>
                     <div class="divider"></div>
                     <span>Backup</span>
+                </button>
+                <button class="nav-item" onclick="openLogLocation()">
+                    <i class="fas fa-file-alt"></i>
+                    <div class="divider"></div>
+                    <span>Logs</span>
                 </button>
                 
                 <!-- Sidebar Action Buttons -->
@@ -1137,9 +1154,9 @@
                     <div class="config-group">
                         <h3><i class="fas fa-palette"></i> Preset Themes</h3>
                         <div class="theme-presets">
-                            <div class="theme-preset" onclick="applyTheme('skidcleaner')">
-                                <div class="theme-preview skidcleaner-preview"></div>
-                                <h4>skidcleaner</h4>
+                            <div class="theme-preset" onclick="applyTheme('slate')">
+                                <div class="theme-preview slate-preview"></div>
+                                <h4>Slate</h4>
                                 <p>dark grey with crimson accents</p>
                             </div>
                             <div class="theme-preset" onclick="applyTheme('obsidian')">
@@ -1360,7 +1377,7 @@
                 },
                 roblox: {
                     download_roblox: true,
-                    launch_roblox_on_exit: false,
+                    launch_roblox_on_exit: true,
                     create_appsettings: true
                 },
                 tools: {
@@ -1370,7 +1387,7 @@
                     show_command_output: true,
                     force_file_deletion: true,
                     skip_confirmation_prompts: false,
-                    auto_restart_after_cleaning: false
+                    auto_restart_after_cleaning: true
                 }
             },
             aggressive: {
@@ -1378,7 +1395,7 @@
                     log_enabled: true,
                     open_log_on_exit: true,
                     capture_console_history: true,
-                    clear_screen_on_sections: true
+                    clear_screen_on_sections: false
                 },
                 cleaning: {
                     kill_processes: true,
@@ -1408,29 +1425,29 @@
                 general: {
                     log_enabled: true,
                     open_log_on_exit: false,
-                    capture_console_history: false,
-                    clear_screen_on_sections: false
+                    capture_console_history: true,
+                    clear_screen_on_sections: true
                 },
                 cleaning: {
                     kill_processes: true,
-                    clean_folders: true,
-                    remove_cookies: false,
-                    flush_dns: false,
+                    clean_folders: false,
+                    remove_cookies: true,
+                    flush_dns: true,
                     restart_explorer: false,
                     clean_registry: false,
                     clean_prefetch: false
                 },
                 roblox: {
                     download_roblox: false,
-                    launch_roblox_on_exit: false,
+                    launch_roblox_on_exit: true,
                     create_appsettings: false
                 },
                 tools: {
-                    run_byebanasync: false
+                    run_byebanasync: true
                 },
                 advanced: {
-                    show_command_output: false,
-                    force_file_deletion: false,
+                    show_command_output: true,
+                    force_file_deletion: true,
                     skip_confirmation_prompts: false,
                     auto_restart_after_cleaning: false
                 }
@@ -1442,7 +1459,7 @@
 
         // Theme management
         const themes = {
-            skidcleaner: {
+            slate: {
                 'bg-primary': '#0a0a0a',
                 'bg-secondary': '#0f0f0f',
                 'bg-tertiary': '#151515',
@@ -1574,86 +1591,7 @@
             }
         }
 
-        function exportTheme() {
-            const currentTheme = {};
-            Object.keys(themes.obsidian).forEach(key => {
-                const style = getComputedStyle(document.documentElement);
-                currentTheme[key] = style.getPropertyValue(`--${key}`).trim();
-            });
-            
-            const themeBlob = new Blob([JSON.stringify(currentTheme, null, 2)], { type: 'application/json' });
-            const themeUrl = URL.createObjectURL(themeBlob);
-            
-            const link = document.createElement('a');
-            link.href = themeUrl;
-            link.download = `roblox-cleaner-theme-${new Date().toISOString().slice(0, 10)}.json`;
-            link.click();
-            
-            URL.revokeObjectURL(themeUrl);
-            updateStatus('Theme exported');
-        }
-
-        function importTheme() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.onchange = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        try {
-                            const theme = JSON.parse(event.target.result);
-                            Object.keys(theme).forEach(key => {
-                                document.documentElement.style.setProperty(`--${key}`, theme[key]);
-                                const colorInput = document.getElementById(key);
-                                const textInput = document.querySelector(`input[onchange*="${key}"]`);
-                                if (colorInput) {
-                                    colorInput.value = theme[key];
-                                }
-                                if (textInput && textInput.type === 'text') {
-                                    textInput.value = theme[key];
-                                }
-                            });
-                            updateStatus('Theme imported successfully');
-                            saveCustomThemeToStorage();
-                        } catch (error) {
-                            updateStatus('Failed to import theme: Invalid JSON');
-                        }
-                    };
-                    reader.readAsText(file);
-                }
-            };
-            input.click();
-        }
-
-        function resetTheme() {
-            applyTheme('obsidian');
-            updateStatus('Theme reset to default');
-        }
-
-        function randomTheme() {
-            const randomColors = {};
-            Object.keys(themes.obsidian).forEach(key => {
-                randomColors[key] = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
-            });
-            
-            Object.keys(randomColors).forEach(key => {
-                document.documentElement.style.setProperty(`--${key}`, randomColors[key]);
-                const colorInput = document.getElementById(key);
-                const textInput = document.querySelector(`input[onchange*="${key}"]`);
-                if (colorInput) {
-                    colorInput.value = randomColors[key];
-                }
-                if (textInput && textInput.type === 'text') {
-                    textInput.value = randomColors[key];
-                }
-            });
-            
-            updateStatus('Random theme generated');
-            saveCustomThemeToStorage();
-        }
-
+        
         function saveThemeToStorage(themeName) {
             localStorage.setItem('selected-theme', themeName);
         }
@@ -1698,7 +1636,6 @@
             loadThemeFromStorage();
             loadConfigFromStorage();
             updateUIFromConfig();
-            updateStatus('Configuration loaded successfully');
         }
 
         // Navigation
@@ -1979,267 +1916,6 @@
             };
         }
 
-        // Save configuration
-        function saveConfig() {
-            const config = getConfigFromUI();
-            
-            // Generate the complete Python script with embedded config
-            const pythonScript = generateExecutableScript(config);
-            
-            // Create and download the file
-            const blob = new Blob([pythonScript], { type: 'text/x-python' });
-            const url = URL.createObjectURL(blob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'skidcleaner.py';
-            link.click();
-            
-            URL.revokeObjectURL(url);
-            updateStatus('Configuration saved as executable Python script');
-            hasUnsavedChanges = false;
-            updateLastSaved();
-        }
-
-        function generateExecutableScript(config) {
-            return `#!/usr/bin/env python3
-"""
-skidcleaner Web Launcher - Self-contained with local skidcleaner.py in webmaybe folder
-Generated with custom configuration
-"""
-
-import os
-import sys
-import subprocess
-import shutil
-import json
-import tempfile
-from pathlib import Path
-
-# Embedded configuration
-CONFIG = ${JSON.stringify(config, null, 4).replace(/true/g, 'True').replace(/false/g, 'False')}
-
-def download_and_extract_package(temp_dir, config):
-    """Download and extract skidcleaner package from GitHub."""
-    try:
-        import json as json_module
-        import urllib.request
-        import zipfile
-        import io
-        
-        # GitHub API URL for latest release
-        api_url = "https://api.github.com/repos/midinterlude/skidcleaner/releases/latest"
-        
-        print("[DOWNLOAD] Getting latest skidcleaner package...")
-        print(f"[INFO] Repository: https://github.com/midinterlude/skidcleaner")
-        
-        # Get release information from GitHub API
-        with urllib.request.urlopen(api_url) as response:
-            release_data = json_module.loads(response.read().decode())
-        
-        # Find the zip package file in the release assets
-        download_url = None
-        package_name = None
-        for asset in release_data.get('assets', []):
-            if asset['name'].endswith('.zip') and 'skidcleaner' in asset['name'].lower():
-                download_url = asset['browser_download_url']
-                package_name = asset['name']
-                break
-        
-        if not download_url:
-            print("[ERROR] No skidcleaner package found in release assets")
-            return None, None, None
-        
-        print(f"[DOWNLOAD] Found package: {package_name}")
-        print(f"[DOWNLOAD] Download URL: {download_url}")
-        
-        # Download the zip package
-        print("[DOWNLOAD] Downloading skidcleaner package...")
-        with urllib.request.urlopen(download_url) as response:
-            zip_data = response.read()
-        
-        # Extract the zip package
-        print("[EXTRACT] Extracting package...")
-        with zipfile.ZipFile(io.BytesIO(zip_data)) as zip_ref:
-            package_dir = os.path.join(temp_dir, "skidcleaner-package")
-            zip_ref.extractall(package_dir)
-        
-        print(f"[SUCCESS] Package extracted to: {package_dir}")
-        
-        # Update the configuration file in the extracted package
-        config_path = os.path.join(package_dir, "skidcleaner.config.json")
-        with open(config_path, 'w') as f:
-            json.dump(config, f, indent=2)
-        print(f"[CONFIG] Configuration saved to: {config_path}")
-        
-        # Find the executable
-        exe_path = os.path.join(package_dir, "skidcleaner.exe")
-        if not os.path.exists(exe_path):
-            print(f"[ERROR] skidcleaner.exe not found in package")
-            print(f"[DEBUG] Contents of package directory:")
-            try:
-                for item in os.listdir(package_dir):
-                    print(f"  - {item}")
-            except:
-                pass
-            return None, None, None
-        
-        return exe_path, config_path, package_dir
-        
-    except Exception as e:
-        print(f"[ERROR] Failed to download/extract package: {e}")
-        return None, None, None
-
-def save_config(temp_dir):
-    """Save configuration to config.json."""
-    try:
-        config_path = os.path.join(temp_dir, "cleaner_config.json")
-        
-        with open(config_path, 'w') as f:
-            json.dump(CONFIG, f, indent=2)
-        
-        print(f"[SUCCESS] Configuration saved to: {config_path}")
-        return config_path
-        
-    except Exception as e:
-        print(f"[ERROR] Error saving config: {e}")
-        return None
-
-def run_skidcleaner(exe_path, config_path, package_dir):
-    """Run skidcleaner executable with the custom configuration."""
-    try:
-        print("[LAUNCH] Launching skidcleaner executable...")
-        
-        # Change to the package directory
-        os.chdir(package_dir)
-        
-        # Run the executable with automatic "y" response for confirmation
-        process = subprocess.Popen(
-            [exe_path], 
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-            universal_newlines=True
-        )
-        
-        # Automatically respond "y" to any confirmation prompts
-        try:
-            stdout, _ = process.communicate(input="y\\n", timeout=300)  # 5 minute timeout
-            print(stdout)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            print("[ERROR] skidcleaner timed out")
-            return
-        
-        if process.returncode == 0:
-            print("[SUCCESS] skidcleaner completed successfully!")
-        else:
-            print(f"[ERROR] skidcleaner exited with code: {process.returncode}")
-        
-    except Exception as e:
-        print(f"[ERROR] Error running skidcleaner: {e}")
-
-def main():
-    """Main execution function."""
-    print("[WEB] skidcleaner Web Launcher")
-    print("=" * 50)
-    print("[INFO] This launcher will:")
-    print("  1. Download skidcleaner package from GitHub")
-    print("  2. Extract package with skidcleaner.exe")
-    print("  3. Save your custom configuration")
-    print("  4. Run skidcleaner.exe with your settings")
-    print()
-    
-    # Create temporary directory
-    temp_dir = tempfile.mkdtemp()
-    package_dir = None
-    try:
-        print(f"[INFO] Working directory: {temp_dir}")
-        
-        # Download and extract package
-        exe_path, config_path, package_dir = download_and_extract_package(temp_dir, CONFIG)
-        if not exe_path:
-            print("[ERROR] Failed to download/extract skidcleaner package")
-            input("Press Enter to exit...")
-            return
-        
-        print("[READY] Ready to run skidcleaner!")
-        print()
-        print(f"  • Package extracted to: {package_dir}")
-        print(f"  • Executable: {os.path.basename(exe_path)}")
-        print(f"  • Configuration: skidcleaner.config.json")
-        print()
-        
-        # Ask user to continue
-        response = input("[PROMPT] Ready to run skidcleaner? (y/n): ").lower().strip()
-        if response not in ['y', 'yes']:
-            print("[CANCELLED] Operation cancelled by user")
-            return
-        
-        # Run skidcleaner
-        run_skidcleaner(exe_path, config_path, package_dir)
-        
-        print()
-        print("[SUCCESS] Launcher completed successfully!")
-        print("[INFO] Your configuration was used for this cleaning session")
-        print("[INFO] skidcleaner has finished!")
-        
-    except Exception as e:
-        print(f"[ERROR] Error in launcher: {e}")
-        input("Press Enter to exit...")
-    finally:
-        # AGGRESSIVE cleanup of entire temp directory (including package)
-        import gc
-        import threading
-        import time
-        
-        print("[CLEANUP] Starting temp directory cleanup...")
-        
-        def cleanup_with_retry(temp_dir, max_retries=5, delay=1):
-            for attempt in range(max_retries):
-                try:
-                    if os.path.exists(temp_dir):
-                        shutil.rmtree(temp_dir, ignore_errors=True)
-                        if not os.path.exists(temp_dir):
-                            print(f"[SUCCESS] Temp directory cleaned: {temp_dir}")
-                            return True
-                except Exception as e:
-                    print(f"[CLEANUP] Attempt {attempt + 1} failed: {e}")
-                    time.sleep(delay)
-                    
-                # Force garbage collection and close file handles
-                gc.collect()
-                time.sleep(delay)
-            
-            # Final attempt with Windows-specific approach
-            try:
-                if os.path.exists(temp_dir):
-                    import subprocess
-                    subprocess.run(['cmd', '/c', 'rmdir', '/s', '/q', temp_dir], 
-                                 capture_output=True, text=True, timeout=10)
-                    if not os.path.exists(temp_dir):
-                        print(f"[SUCCESS] Temp directory cleaned with cmd: {temp_dir}")
-                        return True
-            except:
-                pass
-            
-            print(f"[WARNING] Could not clean temp directory: {temp_dir}")
-            print("[INFO] You may need to restart your computer to clear locked temp files")
-            return False
-        
-        # Start cleanup in background thread to avoid blocking
-        if temp_dir:
-            cleanup_thread = threading.Thread(target=cleanup_with_retry, args=(temp_dir,))
-            cleanup_thread.daemon = True
-            cleanup_thread.start()
-
-if __name__ == "__main__":
-    main()
-`;
-        }
-
         // Save configuration and generate launcher files
         function saveLauncherFiles() {
             const config = getConfigFromUI();
@@ -2250,7 +1926,7 @@ if __name__ == "__main__":
                 const configUrl = URL.createObjectURL(configBlob);
                 const configLink = document.createElement('a');
                 configLink.href = configUrl;
-                configLink.download = 'skidcleaner.config.json';
+                configLink.download = 'slate.config.json';
                 document.body.appendChild(configLink);
                 configLink.click();
                 document.body.removeChild(configLink);
@@ -2258,9 +1934,9 @@ if __name__ == "__main__":
                 
                 updateStatus('Configuration file downloaded!');
                 updateStatus('Next steps:');
-                updateStatus('1. Download skidcleaner.exe from GitHub releases');
-                updateStatus('2. Place skidcleaner.config.json in same folder');
-                updateStatus('3. Run skidcleaner.exe');
+                updateStatus('1. Download slate.exe from GitHub releases');
+                updateStatus('2. Place slate.config.json in same folder');
+                updateStatus('3. Run slate.exe');
                 
                 // Show simple instructions popup
                 showSimpleInstructionsPopup();
@@ -2274,128 +1950,8 @@ if __name__ == "__main__":
             }
         }
 
-        // Generate batch wrapper content
-        function generateBatchWrapper() {
-            return `@echo off
-echo ========================================
-echo       Skidcleaner Auto Launcher
-echo ========================================
-echo.
 
-REM Check if launcher.py exists
-if not exist "launcher.py" (
-    echo [ERROR] launcher.py not found!
-    echo Place this file in the same folder as launcher.py
-    pause
-    exit /b 1
-)
-
-echo [INFO] Running launcher script...
-python launcher.py
-
-if %errorlevel% neq 0 (
-    echo.
-    echo [ERROR] Python not found or script failed
-    echo.
-    echo [INFO] Installing Python automatically...
-    
-    REM Download and install Python
-    powershell -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe' -OutFile 'python_installer.exe'"
-    
-    if exist "python_installer.exe" (
-        echo [INSTALL] Installing Python (this may take a few minutes)...
-        python_installer.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
         
-        REM Wait and update PATH
-        timeout /t 30 /nobreak >nul
-        set "PATH=%PATH%;%LOCALAPPDATA%\\Programs\\Python\\Python311\\Scripts;%LOCALAPPDATA%\\Programs\\Python\\Python311"
-        
-        del python_installer.exe 2>nul
-        
-        echo [SUCCESS] Python installed, running launcher...
-        python launcher.py
-    ) else (
-        echo [ERROR] Failed to download Python installer
-        echo Please install Python manually from python.org
-    )
-)
-
-pause`;
-        }
-
-        // Show instructions popup
-        function showInstructionsPopup() {
-            const popup = document.createElement('div');
-            popup.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: var(--bg-elevated);
-                border: 1px solid var(--border-primary);
-                border-radius: 12px;
-                padding: 24px;
-                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-                z-index: 10000;
-                max-width: 500px;
-                width: 90%;
-            `;
-            
-            popup.innerHTML = `
-                <div style="display: flex; align-items: center; margin-bottom: 16px;">
-                    <i class="fas fa-check-circle" style="color: #10b981; font-size: 24px; margin-right: 12px;"></i>
-                    <h3 style="color: var(--text-primary); margin: 0; font-size: 18px;">Files Downloaded Successfully!</h3>
-                </div>
-                
-                <div style="color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;">
-                    <p style="margin: 0 0 12px 0;"><strong>Next Steps:</strong></p>
-                    <ol style="margin: 0; padding-left: 20px;">
-                        <li style="margin-bottom: 8px;">Place both files in the same folder</li>
-                        <li style="margin-bottom: 8px;"><strong>Double-click <code style="background: var(--bg-overlay); padding: 2px 6px; border-radius: 4px; color: #3b82f6;">run_skidcleaner.bat</code></strong></li>
-                        <li>The batch file will automatically install Python and run skidcleaner</li>
-                    </ol>
-                </div>
-                
-                <div style="background: var(--bg-overlay); border-radius: 8px; padding: 12px; margin-bottom: 20px;">
-                    <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">
-                        <i class="fas fa-info-circle" style="color: #3b82f6; margin-right: 8px;"></i>
-                        <strong>Important:</strong> Run the <code style="background: var(--bg-primary); padding: 1px 4px; border-radius: 3px;">.bat</code> file, not the <code style="background: var(--bg-primary); padding: 1px 4px; border-radius: 3px;">.py</code> file!
-                    </p>
-                </div>
-                
-                <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                    <button onclick="this.closest('div').remove()" style="
-                        background: var(--bg-overlay);
-                        color: var(--text-primary);
-                        border: 1px solid var(--border-primary);
-                        padding: 8px 16px;
-                        border-radius: 6px;
-                        cursor: pointer;
-                        font-size: 14px;
-                    ">Got it!</button>
-                </div>
-            `;
-            
-            // Add backdrop
-            const backdrop = document.createElement('div');
-            backdrop.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 9999;
-            `;
-            backdrop.onclick = () => {
-                document.body.removeChild(backdrop);
-                document.body.removeChild(popup);
-            };
-            
-            document.body.appendChild(backdrop);
-            document.body.appendChild(popup);
-        }
-
         // Show simple instructions popup
         function showSimpleInstructionsPopup() {
             const popup = document.createElement('div');
@@ -2423,9 +1979,9 @@ pause`;
                 <div style="color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;">
                     <p style="margin: 0 0 12px 0;"><strong>Simple Setup:</strong></p>
                     <ol style="margin: 0; padding-left: 20px;">
-                        <li style="margin-bottom: 8px;">Download <strong>skidcleaner.exe</strong> from <a href="https://github.com/midinterlude/skidcleaner/releases" target="_blank" style="color: #3b82f6;">GitHub Releases</a></li>
-                        <li style="margin-bottom: 8px;">Place <code style="background: var(--bg-overlay); padding: 2px 6px; border-radius: 4px; color: #3b82f6;">skidcleaner.config.json</code> in the same folder</li>
-                        <li style="margin-bottom: 8px;"><strong>Double-click skidcleaner.exe</strong> to run</li>
+                        <li style="margin-bottom: 8px;">Download <strong>slate.exe</strong> from <a href="https://github.com/midinterlude/slate/releases" target="_blank" style="color: #3b82f6;">GitHub Releases</a></li>
+                        <li style="margin-bottom: 8px;">Place <code style="background: var(--bg-overlay); padding: 2px 6px; border-radius: 4px; color: #3b82f6;">slate.config.json</code> in the same folder</li>
+                        <li style="margin-bottom: 8px;"><strong>Double-click slate.exe</strong> to run</li>
                     </ol>
                 </div>
                 
@@ -2470,8 +2026,28 @@ pause`;
         }
 
         function saveOnly() {
-            saveConfig();
-            updateStatus('Executable Python script saved');
+            const config = getConfigFromUI();
+            
+            try {
+                // Create and download config file as JSON
+                const configBlob = new Blob([JSON.stringify(config, null, 4)], { type: 'application/json' });
+                const configUrl = URL.createObjectURL(configBlob);
+                const configLink = document.createElement('a');
+                configLink.href = configUrl;
+                configLink.download = 'slate.config.json';
+                document.body.appendChild(configLink);
+                configLink.click();
+                document.body.removeChild(configLink);
+                URL.revokeObjectURL(configUrl);
+                
+                updateStatus('Configuration file saved as JSON');
+                hasUnsavedChanges = false;
+                updateLastSaved();
+                
+            } catch (error) {
+                console.error('Error generating config file:', error);
+                updateStatus('Error generating config file: ' + error.message, 'error');
+            }
         }
 
         function exportConfig() {
@@ -2567,7 +2143,7 @@ pause`;
         // Modal functions
         function showModal(title, message, onConfirm) {
             document.getElementById('modal-title').textContent = title;
-            document.getElementById('modal-message').textContent = message;
+            document.getElementById('modal-message').innerHTML = message;
             document.getElementById('confirmModal').style.display = 'block';
             
             const confirmBtn = document.getElementById('modal-confirm');
@@ -2586,6 +2162,33 @@ pause`;
             document.getElementById('status-text').textContent = message;
         }
 
+        // Log location function
+        function openLogLocation() {
+            const logPath = '%temp%\\slate\\slate.log';
+            
+            showModal('Log Location', 
+                'Log files are stored at:<br><br>' +
+                '<code style="background: var(--bg-secondary); padding: 8px; border-radius: 4px; font-family: monospace; display: inline-block;">' + logPath + '</code><br><br>' +
+                'You can open this location in File Explorer or copy the path above.', 
+                () => {
+                    // Try to open the log location in explorer
+                    try {
+                        // This will only work in Windows/Edge
+                        if (window.shell) {
+                            window.shell.executeCommand('explorer', '/select,' + logPath);
+                            updateStatus('Opening log location...');
+                        } else {
+                            // Fallback: copy to clipboard
+                            navigator.clipboard.writeText(logPath);
+                            updateStatus('Log path copied to clipboard!');
+                        }
+                    } catch (error) {
+                        updateStatus('Could not open log location: ' + error.message);
+                    }
+                }
+            );
+        }
+
         // Initialize on load
         window.addEventListener('load', initializeGUI);
 
@@ -2596,200 +2199,6 @@ pause`;
                 e.returnValue = '';
             }
         });
-
-        // Real-time monitoring functionality
-        let monitoringInterval = null;
-        let isMonitoring = false;
-
-        function startMonitoring() {
-            if (isMonitoring) return;
-            
-            isMonitoring = true;
-            updateStatus('Started monitoring skidcleaner status...');
-            
-            // Clear existing logs
-            const logsContainer = document.getElementById('logs-container');
-            if (logsContainer) {
-                logsContainer.innerHTML = '';
-            }
-            
-            // Poll for status updates every 500ms
-            monitoringInterval = setInterval(async () => {
-                try {
-                    const response = await fetch('http://localhost:8765/status');
-                    if (response.ok) {
-                        const data = await response.json();
-                        displayStatusUpdates(data.updates);
-                    }
-                } catch (error) {
-                    // Server might not be running yet, that's ok
-                    console.log('Monitoring: Could not connect to status server');
-                }
-            }, 500);
-        }
-
-        function stopMonitoring() {
-            if (monitoringInterval) {
-                clearInterval(monitoringInterval);
-                monitoringInterval = null;
-            }
-            isMonitoring = false;
-            updateStatus('Stopped monitoring');
-        }
-
-        function displayStatusUpdates(updates) {
-            const logsContainer = document.getElementById('logs-container');
-            if (!logsContainer) return;
-            
-            // Get current logs
-            const currentLogs = logsContainer.innerHTML;
-            const logLines = currentLogs.split('\n').filter(line => line.trim());
-            
-            // Add new updates
-            updates.forEach(update => {
-                const timestamp = new Date(update.timestamp * 1000).toLocaleTimeString();
-                const logLine = `[${timestamp}] ${update.message}`;
-                
-                // Avoid duplicates
-                if (!logLines.includes(logLine)) {
-                    logLines.push(logLine);
-                }
-            });
-            
-            // Keep only last 100 lines
-            const recentLogs = logLines.slice(-100);
-            logsContainer.innerHTML = recentLogs.join('\n');
-            
-            // Auto-scroll to bottom
-            logsContainer.scrollTop = logsContainer.scrollHeight;
-        }
-
-        function toggleMonitoring() {
-            if (isMonitoring) {
-                stopMonitoring();
-                document.getElementById('monitor-btn').textContent = 'Start Monitoring';
-                document.getElementById('monitor-btn').classList.remove('active');
-            } else {
-                startMonitoring();
-                document.getElementById('monitor-btn').textContent = 'Stop Monitoring';
-                document.getElementById('monitor-btn').classList.add('active');
-            }
-        }
-
-        // Add monitoring controls to the interface
-        function addMonitoringInterface() {
-            const header = document.querySelector('.header');
-            if (!header) return;
-            
-            const monitoringDiv = document.createElement('div');
-            monitoringDiv.className = 'monitoring-controls';
-            monitoringDiv.innerHTML = `
-                <button id="monitor-btn" onclick="toggleMonitoring()" class="btn btn-primary">
-                    Start Monitoring
-                </button>
-                <div class="monitoring-info">
-                    <small>Monitor skidcleaner execution in real-time</small>
-                </div>
-            `;
-            
-            header.appendChild(monitoringDiv);
-            
-            // Add logs display area at the bottom
-            const container = document.querySelector('.container');
-            if (container) {
-                const logsSection = document.createElement('div');
-                logsSection.className = 'logs-section';
-                logsSection.innerHTML = `
-                    <div class="logs-header">
-                        <h3>Real-time Logs</h3>
-                        <button onclick="clearLogs()" class="btn btn-secondary">Clear Logs</button>
-                    </div>
-                    <div class="logs-container" id="logs-container">
-                        <div class="log-placeholder">
-                            Click "Start Monitoring" to see real-time logs from skidcleaner execution...
-                        </div>
-                    </div>
-                `;
-                container.appendChild(logsSection);
-            }
-        }
-
-        function clearLogs() {
-            const logsContainer = document.getElementById('logs-container');
-            if (logsContainer) {
-                logsContainer.innerHTML = '<div class="log-placeholder">Logs cleared. Start monitoring to see new logs...</div>';
-            }
-        }
-
-        // Add monitoring styles
-        const monitoringStyles = `
-            .monitoring-controls {
-                margin-top: 10px;
-                padding: 10px;
-                background: rgba(255, 255, 255, 0.1);
-                border-radius: 8px;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-            
-            .monitoring-info small {
-                opacity: 0.7;
-            }
-            
-            .logs-section {
-                margin-top: 20px;
-                border: 1px solid var(--border);
-                border-radius: 8px;
-                overflow: hidden;
-            }
-            
-            .logs-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 15px;
-                background: var(--secondary);
-                border-bottom: 1px solid var(--border);
-            }
-            
-            .logs-container {
-                height: 300px;
-                overflow-y: auto;
-                padding: 15px;
-                background: #000;
-                color: #00ff00;
-                font-family: 'Courier New', monospace;
-                font-size: 12px;
-                line-height: 1.4;
-                white-space: pre-wrap;
-            }
-            
-            .log-placeholder {
-                color: #666;
-                font-style: italic;
-                text-align: center;
-                padding: 20px;
-            }
-            
-            #monitor-btn.active {
-                background: #dc3545;
-                border-color: #dc3545;
-            }
-            
-            #monitor-btn.active:hover {
-                background: #c82333;
-                border-color: #bd2130;
-            }
-        `;
-
-        // Add styles to page
-        const styleSheet = document.createElement('style');
-        styleSheet.textContent = monitoringStyles;
-        document.head.appendChild(styleSheet);
-
-        // Initialize monitoring interface
-        addMonitoringInterface();
 
         // Close modal when clicking outside
         window.addEventListener('click', (e) => {
