@@ -1,4 +1,4 @@
-# Roblox Cleaner Package - https://discord.gg/HQbG5NFAS3
+# Skidcleaner. - https://discord.gg/HQbG5NFAS3
  
 A packaged executable version of skidcleaner, a powerful tool for cleaning Roblox-related files and registry entries with advanced ban evasion capabilities.
 
