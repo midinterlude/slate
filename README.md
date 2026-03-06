@@ -12,7 +12,7 @@
   <img width="250" src="./docs/content/public/banner-light-1280x640.avif" />
 </picture>
 
-<h1 align="center">Slate</h1>
+<h1 align="center"></h1>
 
 <p align="center">Advanced anti-alt detection system for Roblox with comprehensive cleaning, privacy protection, and network spoofing capabilities.</p>
 
