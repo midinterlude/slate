@@ -89,9 +89,7 @@ This means that **Slate provides complete digital footprint elimination** coveri
 >
 > **Perfect for:**
 > - Privacy-conscious users
-> - Multiple account management
-> - System administrators
-> - Security researchers
+> - People who miss their favorite game but can't get back on it because of a ban ;)
 > - Digital privacy advocates
 
 ## Current Features
