@@ -1,53 +1,188 @@
-import threading, sys, subprocess, os , shutil, glob, json, stat, uuid, time
+# ===== IMPORTS AND GLOBALS =====
+import sys, subprocess, os, shutil, glob, json, stat, uuid, time, requests, threading, zipfile, urllib3, winreg, pyperclip, traceback, msvcrt
+from tqdm import tqdm
 
+# ===== Initial Clear =====
+os.system("cls")
+
+# ===== PATHS AND CONSTANTS =====
 script_dir = os.path.dirname(os.path.abspath(__file__))
-if hasattr(sys, "_MEIPASS"):
-    slate_dir = sys._MEIPASS  # Temporary extraction directory for bundled files
-else:
-    slate_dir = script_dir
+slate_dir = sys._MEIPASS if hasattr(sys, "_MEIPASS") else script_dir
+cert_path = (
+    os.path.join(os.path.dirname(sys.executable), "cacert.pem")
+    if hasattr(sys, "_MEIPASS")
+    else os.path.join(slate_dir, "cacert.pem")
+)
+LP = os.path.expandvars(r"%temp%\slate\slate.log")
+PF = os.path.expandvars(r"C:\Windows\Prefetch\ROBLOX*.pf")
+REGS = [r"HKCU\Software\Roblox", r"HKLM\SOFTWARE\Roblox Corporation"]
+CK = os.path.expandvars(r"%appdata%\local\Roblox\Localstorage\RobloxCookies.dat")
+PROCS = ["RobloxPlayerBeta.exe", "RobloxPlayerInstaller.exe"]
+PATHS = [
+    r"%temp%",
+    r"%temp%/*",
+    r"%localappdata%\Temp",
+    r"%localappdata%\Roblox",
+    r"%appdata%\Roblox",
+    r"%appdata%\Local\Roblox",
+]
 
-# Handle certificate path for both modes
-if hasattr(sys, "_MEIPASS"):
-    # For compiled exe, look for cert in the exe directory
-    cert_path = os.path.join(os.path.dirname(sys.executable), "cacert.pem")
-else:
-    # For script mode, look in script directory
-    cert_path = os.path.join(slate_dir, "cacert.pem")
-    
+# ===== SETUP =====
 if os.path.exists(cert_path):
     os.environ["SSL_CERT_FILE"] = cert_path
 
-LP = os.path.expandvars(r"%temp%\slate\slate.log")
+# ===== ERROR CLASSES =====
+class SlateError(Exception):
+    def __init__(self, message, operation=None, details=None):
+        super().__init__(message)
+        self.operation = operation
+        self.details = details or {}
 
-def load_config():
+
+class ConfigurationError(SlateError):
+    pass
+
+
+class DownloadError(SlateError):
+    pass
+
+
+class FileOperationError(SlateError):
+    pass
+
+
+class ProcessError(SlateError):
+    pass
+
+
+class NetworkError(SlateError):
+    pass
+
+
+class RegistryError(SlateError):
+    pass
+
+
+# ===== LOGGING =====
+LOG = True
+OPEN_LOG = True
+
+
+def log(msg, debug_only=False):
+
+    is_progress_bar = any(
+        char in msg for char in ["█", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "│"]
+    )
+
+    debug_prefix = "🔍 DEBUG: " if debug_only else ""
+
+    if is_progress_bar:
+        if "100%" in msg:
+            print(msg, end="\r")
+            print()
+            return
+        else:
+            print(msg, end="\r")
+            return
+    elif (
+        msg.endswith("downloaded and extracted")
+        or msg.endswith("packages")
+        or "Successfully downloaded" in msg
+    ):
+        print(msg)
+    else:
+        print(f"{debug_prefix}{msg}" if not debug_only else msg)
+
+    if LOG and not debug_only:
+        try:
+            clean_msg = msg.replace("\r", "")
+            if (
+                "|" in clean_msg
+                and "%" in clean_msg
+                and any(
+                    char in clean_msg
+                    for char in ["█", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "│"]
+                )
+            ):
+                return
+            log_dir = os.path.dirname(LP)
+            os.makedirs(log_dir, exist_ok=True)
+            with open(LP, "a", encoding="utf-8") as f:
+                timestamp = time.strftime("%H:%M:%S")
+                log_entry = (
+                    f"[{timestamp}] DEBUG: {clean_msg}"
+                    if debug_only
+                    else f"[{timestamp}] {clean_msg}"
+                )
+                f.write(log_entry + "\n")
+                f.flush()
+        except Exception as e:
+            error_msg = f"Log write error: {e}"
+            print(f"🔍 DEBUG: {error_msg}" if debug_only else error_msg)
+
+
+def auto_close():
+    print("=" * 51)
+    print("This window will automatically close in 15 seconds.")
+    print("Press Enter to close immediately...")
+    print("=" * 51)
+
+    start_time = time.time()
+    delay = 15
+
+    while time.time() - start_time < delay:
+        remaining = int(delay - (time.time() - start_time))
+        print(
+            f"\rClosing in {remaining} seconds... (Press Enter to close)",
+            end="",
+            flush=True,
+        )
+        if msvcrt.kbhit():
+            key = msvcrt.getch()
+            if key == b"\r":
+                print("\nClosing immediately...")
+                break
+
+        time.sleep(0.1)
+
+    print("\n")
+
+
+# ===== CONFIGURATION =====
+def load_cfg():
+    log("Loading configuration file")
     if hasattr(sys, "_MEIPASS"):
-        # Running as compiled exe - config should be in the same directory as the exe
-        # sys.executable gives the path to the executable
         exe_dir = os.path.dirname(sys.executable)
         config_path = os.path.join(exe_dir, "slate.config.json")
+        log("🔍 DEBUG: Running as EXE, config path: " + config_path, debug_only=True)
     else:
-        # Running as script - config should be in the same directory as the script
         config_path = os.path.join(slate_dir, "slate.config.json")
-    
+        log("🔍 DEBUG: Running as script, config path: " + config_path, debug_only=True)
+
     if not os.path.exists(config_path):
         print("❌ Required configuration file not found: slate.config.json")
-        print("Please visit https://midinterlude.github.io/slate/ to get the configuration file")
+        print(
+            "Please visit https://midinterlude.github.io/slate/ to get the configuration file"
+        )
         print("The link has been copied to your clipboard.")
-        
+
         try:
-            import pyperclip
             pyperclip.copy("https://midinterlude.github.io/slate/")
         except ImportError:
             try:
-                # Fallback method using Windows clipboard
-                import subprocess
-                subprocess.run(['cmd', '/c', 'echo https://midinterlude.github.io/slate/ | clip'], shell=True, capture_output=True)
+                subprocess.run(
+                    ["cmd", "/c", "echo https://midinterlude.github.io/slate/ | clip"],
+                    shell=True,
+                    capture_output=True,
+                )
             except:
-                print("Could not copy link to clipboard automatically. Please manually copy: https://midinterlude.github.io/slate/")
-        
-        auto_close_after_delay()
+                print(
+                    "Could not copy link to clipboard automatically. Please manually copy: https://midinterlude.github.io/slate/"
+                )
+
+        auto_close()
         sys.exit(1)
-    
+
     try:
         with open(config_path, "r") as f:
             config = json.load(f)
@@ -56,14 +191,17 @@ def load_config():
     except json.JSONDecodeError as e:
         print(f"❌ Invalid JSON in configuration file: {e}")
         print("Please check your slate.config.json file for syntax errors.")
-        auto_close_after_delay()
+        log(f"🔍 DEBUG: JSON decode error: {e}", debug_only=True)
+        auto_close()
         sys.exit(1)
     except Exception as e:
         print(f"❌ Error loading configuration file: {e}")
-        auto_close_after_delay()
+        log(f"🔍 DEBUG: Config load error: {e}", debug_only=True)
+        auto_close()
         sys.exit(1)
 
-def ensure_dependencies():
+
+def ensure_deps():
     missing = []
     for pkg in ("requests", "tqdm"):
         try:
@@ -80,129 +218,21 @@ def ensure_dependencies():
             print("Please install the following packages manually:")
             for pkg in missing:
                 print(f"  pip install {pkg}")
+            log(f"🔍 DEBUG: Package install failed: {e}", debug_only=True)
             input("Press Enter to exit...")
             sys.exit(1)
         except Exception as e:
             print(f"Unexpected error during package installation: {e}")
+            log(f"🔍 DEBUG: Package install error: {e}", debug_only=True)
             input("Press Enter to exit...")
             sys.exit(1)
 
-ensure_dependencies()
 
-class SlateError(Exception):
-
-    def __init__(self, message, operation=None, details=None):
-        super().__init__(message)
-        self.operation = operation
-        self.details = details or {}
-
-class ConfigurationError(SlateError):
-
-    pass
-
-class DownloadError(SlateError):
-
-    pass
-
-class FileOperationError(SlateError):
+ensure_deps()
 
 
-    pass
-
-class ProcessError(SlateError):
-
-
-    pass
-
-class NetworkError(SlateError):
-
-
-    pass
-
-class RegistryError(SlateError):
-
-
-    pass
-
-LP = os.path.expandvars(r"%temp%\slate\slate.log")
-LOG = True
-OPEN_LOG = True
-
-def log(message):
-
-    import sys
-
-    is_progress_bar = any(
-        char in message for char in ["█", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "│"]
-    )
-
-    if is_progress_bar:
-        if "100%" in message:
-            print(message, end="\r")
-            print()
-            return
-        else:
-            print(message, end="\r")
-            return
-    elif (
-        message.endswith("downloaded and extracted")
-        or message.endswith("packages")
-        or "Successfully downloaded" in message
-    ):
-        print(message)
-    else:
-        print(message)
-
-    if LOG:
-        try:
-            clean_message = message.replace("\r", "")
-            if (
-                "|" in clean_message
-                and "%" in clean_message
-                and any(
-                    char in clean_message
-                    for char in ["█", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "│"]
-                )
-            ):
-                return
-            log_dir = os.path.dirname(LP)
-            os.makedirs(log_dir, exist_ok=True)
-            with open(LP, "a", encoding="utf-8") as f:
-                f.write(clean_message + "\n")
-                f.flush()
-        except Exception as e:
-            print(f"Log write error: {e}")
-
-def auto_close_after_delay():
-    """Automatically close the application after 15 seconds, with Enter key to skip"""
-    print("="*51)
-    print("This window will automatically close in 15 seconds.")
-    print("Press Enter to close immediately...")
-    print("="*51)
-    
-    start_time = time.time()
-    delay = 15
-    
-    # Use a non-blocking input approach
-    import msvcrt
-    
-    while time.time() - start_time < delay:
-        remaining = int(delay - (time.time() - start_time))
-        print(f"\rClosing in {remaining} seconds... (Press Enter to close)", end="", flush=True)
-        
-        # Check if Enter key is pressed
-        if msvcrt.kbhit():
-            key = msvcrt.getch()
-            if key == b'\r':  # Enter key
-                print("\nClosing immediately...")
-                break
-        
-        time.sleep(0.1)
-    
-    print("\n")
-
-def validate_config(config):
-
+def validate_cfg(config):
+    log("Loading configuration file")
     try:
         required_sections = [
             "general",
@@ -233,27 +263,16 @@ def validate_config(config):
                 if not value:
                     print(f"⚠️  Empty list in {section}.{key}")
         print("✅ Configuration validation passed")
+        os.system("cls")
         return True
     except Exception as e:
         print(f"❌ Configuration validation error: {e}")
         return False
 
-PF = os.path.expandvars(r"C:\Windows\Prefetch\ROBLOX*.pf")
-REGS = [r"HKCU\Software\Roblox", r"HKLM\SOFTWARE\Roblox Corporation"]
-CK = os.path.expandvars(r"%appdata%\local\Roblox\Localstorage\RobloxCookies.dat")
-PROCS = ["RobloxPlayerBeta.exe", "RobloxPlayerInstaller.exe"]
-PATHS = [
-    r"%temp%",
-    r"%temp%/*",
-    r"%localappdata%\Temp",
-    r"%localappdata%\Roblox",
-    r"%appdata%\Roblox",
-    r"%appdata%\Local\Roblox",
-]
 
-def cleanfolders():
-    from tqdm import tqdm
-    import sys
+# ===== CLEANING OPERATIONS =====
+def clean_folders():
+    log("Starting configuration validation")
 
     all_paths = []
     for pattern in PATHS:
@@ -295,6 +314,7 @@ def cleanfolders():
                         except Exception as e2:
                             error_msg = f"Failed to remove file {path}: {e2}"
                             log(f"  ❌ {error_msg}")
+                            log(f"🔍 DEBUG: File removal failed: {e2}", debug_only=True)
                             error_count += 1
                             error_details.append(
                                 {"path": path, "error": str(e2), "type": "file"}
@@ -312,13 +332,15 @@ def cleanfolders():
                                     try:
                                         os.chmod(file_path, stat.S_IWRITE)
                                         os.remove(file_path)
-                                    except:
+                                    except Exception as e2:
+                                        log(f"Unexpected error: {e2}")
                                         pass
                                 for dir in dirs:
                                     dir_path = os.path.join(root, dir)
                                     try:
                                         os.chmod(dir_path, stat.S_IWRITE)
-                                    except:
+                                    except Exception as e2:
+                                        log(f"File permission error: {e2}")
                                         pass
                             shutil.rmtree(path, ignore_errors=True)
                             log(f"  ✅ Force removed directory: {path}")
@@ -374,7 +396,9 @@ def cleanfolders():
                 details={"total_items": len(all_paths), "errors": error_details},
             )
 
-def removecookies():
+
+def remove_cookies():
+    log("Starting cookie removal operation")
     if os.path.exists(CK):
         try:
             os.remove(CK)
@@ -385,54 +409,326 @@ def removecookies():
     else:
         log(f"  - Cookie file not found: {CK}")
 
-BANNER = r"""
-▐▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▌
-▐     ▄████████  ▄█          ▄████████     ███        ▄████████  ▌
-▐    ███    ███ ███         ███    ███ ▀█████████▄   ███    ███  ▌
-▐    ███    █▀  ███         ███    ███    ▀███▀▀██   ███    █▀   ▌
-▐    ███        ███         ███    ███     ███   ▀  ▄███▄▄▄      ▌
-▐  ▀███████████ ███       ▀███████████     ███     ▀▀███▀▀▀      ▌
-▐           ███ ███         ███    ███     ███       ███    █▄   ▌
-▐     ▄█    ███ ███▌    ▄   ███    ███     ███       ███    ███  ▌
-▐   ▄████████▀  █████▄▄██   ███    █▀     ▄████▀     ██████████  ▌
-▐               ▀                                                ▌
-▐▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▌
- by: midinterlude (logs can be found in %temp%\\slate\\slate.log)
- """
 
-def title(config=None):
-    if config and config.get("general", {}).get("clear_screen_on_sections", False):
-        os.system("cls")
-    print(BANNER)
+# ===== NETWORK OPERATIONS =====
+def gen_mac():
+    log("Starting cookie removal operation")
+    mac_bytes = [0x02] + [random.randint(0, 255) for _ in range(5)]
+    return "".join(f"{byte:02X}" for byte in mac_bytes)
 
 
-def get_roblox_client_settings(config=None):
+def list_adapters():
+    log("Generating random MAC address")
     try:
-        import requests
-        import urllib3
+
+        adapters = []
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE,
+            r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}",
+        ) as class_key:
+            for i in range(10000):
+
+                try:
+                    subkey_name = f"{i:04d}"
+                    with winreg.OpenKey(class_key, subkey_name) as adapter_key:
+                        try:
+                            driver_desc = winreg.QueryValueEx(
+                                adapter_key, "DriverDesc"
+                            )[0]
+                            net_cfg_instance_id = winreg.QueryValueEx(
+                                adapter_key, "NetCfgInstanceId"
+                            )[0]
+
+                            try:
+                                connection_path = f"SYSTEM\\CurrentControlSet\\Control\\Network\\{{4D36E972-E325-11CE-BFC1-08002BE10318}}\\{net_cfg_instance_id}\\Connection"
+                                with winreg.OpenKey(
+                                    winreg.HKEY_LOCAL_MACHINE, connection_path
+                                ) as conn_key:
+                                    connection_name = winreg.QueryValueEx(
+                                        conn_key, "Name"
+                                    )[0]
+                            except:
+                                connection_name = driver_desc
+
+                            desc_lower = driver_desc.lower()
+                            if not any(
+                                keyword in desc_lower
+                                for keyword in [
+                                    "virtual",
+                                    "loopback",
+                                    "bluetooth",
+                                    "wan miniport",
+                                    "tap-windows",
+                                    "pseudo",
+                                ]
+                            ):
+                                adapters.append(
+                                    {
+                                        "id": subkey_name,
+                                        "description": driver_desc,
+                                        "connection_name": connection_name,
+                                    }
+                                )
+                        except (FileNotFoundError, OSError):
+                            continue
+                except FileNotFoundError:
+                    break
+        return adapters
+    except ImportError:
+        log("[!!!] winreg module not available. Cannot list network adapters.")
+        log(f"Unexpected error in get_roblox_settings: {e}")
+        return []
+    except Exception as e:
+        log(f"[!!!] Error listing network adapters: {e}")
+        log(f"Network adapter listing error: {e}")
+        return []
+
+
+def change_mac(adapter_id, mac_address):
+    log(f"Changing MAC for adapter {adapter_id} to {mac_address}")
+
+    try:
+
+        path = f"SYSTEM\\CurrentControlSet\\Control\\Class\\{{4d36e972-e325-11ce-bfc1-08002be10318}}\\{adapter_id}"
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE, path, 0, winreg.KEY_WRITE
+        ) as adapter_key:
+            log(f"[>] Setting 'NetworkAddress' to '{mac_address}'")
+            winreg.SetValueEx(
+                adapter_key, "NetworkAddress", 0, winreg.REG_SZ, mac_address
+            )
+    except ImportError:
+        raise Exception("winreg module not available")
+        log("winreg module not available")
+    except Exception as e:
+        raise Exception(f"Registry error: {e}")
+        log(f"Registry MAC change error: {e}")
+
+
+def restart_adapter(connection_name):
+    log(f"Changing MAC for adapter {adapter_id} to {mac_address}")
+
+    log(f"[>] Disabling adapter: '{connection_name}'")
+    disable_result = subprocess.run(
+        [
+            "netsh",
+            "interface",
+            "set",
+            "interface",
+            f"name={connection_name}",
+            "admin=disable",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if disable_result.returncode != 0:
+        error_msg = disable_result.stderr.strip()
+        log(f"Network adapter listing error: {e}")
+        raise Exception(f"Failed to disable network adapter. Netsh output: {error_msg}")
+    time.sleep(2)
+    log(f"[>] Enabling adapter: '{connection_name}'")
+    enable_result = subprocess.run(
+        [
+            "netsh",
+            "interface",
+            "set",
+            "interface",
+            f"name={connection_name}",
+            "admin=enable",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if enable_result.returncode != 0:
+        error_msg = enable_result.stderr.strip()
+        log(f"Network adapter listing error: {e}")
+        raise Exception(f"Failed to enable network adapter. Netsh output: {error_msg}")
+
+
+def bye_ban(wait=True):
+    log("Starting ByeBanAsync operation")
+    try:
+        log("\n" + "=" * 41)
+        log("ByeBanAsync v2.2 | credits to: centerepic")
+        log("=" * 41)
+
+        user_profile = os.environ.get("USERPROFILE")
+        if not user_profile:
+            log("[!!!] Could not get USERPROFILE environment variable.")
+            return
+        log("\n--- MAC Address Spoofing ---")
+        change_mac = (
+            input("[?] Do you want to attempt to change your MAC address? (y/n): ")
+            .strip()
+            .lower()
+        )
+        if change_mac == "y":
+            adapters = list_adapters()
+            if not adapters:
+                log("[!] No suitable network adapters found to modify.")
+            else:
+                log("\n[i] Available network adapters:")
+                for i, adapter in enumerate(adapters, 1):
+                    log(f"  [{i}] {adapter['description']}")
+                    log(f"     └─ Connection Name: '{adapter['connection_name']}'")
+
+                selected_adapter = None
+                while True:
+                    try:
+                        choice = input(
+                            "\n[?] Enter the number of the adapter to change (or 'skip' to skip): "
+                        ).strip()
+                        if choice.lower() == "skip":
+                            log("[i] Skipping MAC address change.")
+                            break
+                        try:
+                            choice_num = int(choice)
+                            if 1 <= choice_num <= len(adapters):
+                                selected_adapter = adapters[choice_num - 1]
+                                break
+                            else:
+                                log(
+                                    "[!] Invalid selection. Please enter a number from the list."
+                                )
+                        except ValueError:
+                            log(
+                                "[!] Invalid selection. Please enter a number from the list."
+                            )
+                    except (KeyboardInterrupt, EOFError):
+                        log("[i] Cancelled adapter selection.")
+                        break
+
+                if selected_adapter:
+                    random_mac = gen_mac()
+                    log(
+                        f"[>] Attempting to set MAC for adapter: '{selected_adapter['description']}' (ID: {selected_adapter['id']})..."
+                    )
+                    try:
+                        change_mac(selected_adapter["id"], random_mac)
+                        log("[√] Successfully updated registry for MAC address.")
+                        log(
+                            f"[>] Attempting to restart network adapter '{selected_adapter['connection_name']}' to apply changes..."
+                        )
+                        try:
+                            restart_adapter(selected_adapter["connection_name"])
+                            log(
+                                f"[√] Network adapter '{selected_adapter['connection_name']}' restarted. MAC address change should now be active."
+                            )
+                            log("[i] Verify with 'ipconfig /all' or 'getmac'.")
+                        except Exception as e:
+                            log(
+                                f"[!!!] Error restarting network adapter: {e}. You may need to do this manually or reboot."
+                            )
+                            log(f"Adapter restart error: {e}")
+                    except Exception as e:
+                        log(f"[!!!] Error changing MAC address in registry: {e}")
+                        log(f"Registry MAC change error: {e}")
+        else:
+            log("[i] Skipping MAC address change.")
+        log("\n[...] ByeBanAsync completed!")
+    except Exception as e:
+        log(f"[!!!] Error in ByeBanAsync: {e}")
+        log(f"ByeBanAsync error: {e}")
+
+
+# ===== UTILITY FUNCTIONS =====
+def run_cmd(cmd, capture_output=True, shell=False):
+    cmd_str = " ".join(cmd) if isinstance(cmd, list) else cmd
+    log(f"Running command: {cmd_str}")
+    try:
+        if capture_output:
+            result = subprocess.run(cmd, capture_output=True, text=True, shell=shell)
+
+            if result.stdout and result.stdout.strip():
+                log(f"  STDOUT: {result.stdout.strip()}")
+
+            if result.stderr and result.stderr.strip():
+                log(f"  STDERR: {result.stderr.strip()}")
+        else:
+            result = subprocess.run(cmd, shell=shell)
+        if result.returncode == 0:
+            log(f"  Command completed successfully (exit code: {result.returncode})")
+        else:
+            log(f"  Command exited with code: {result.returncode}")
+        return result
+    except Exception as e:
+        log(f"Running command: {cmd_str}")
+        log(f"Error running command: {e}")
+        return None
+
+
+def open_log():
+    try:
+        run_cmd(f'notepad "{LP}"', capture_output=False, shell=True)
+    except Exception as e:
+        print(f"Error opening log: {e}")
+        log(f"Command execution error: {e}")
+
+
+def launch_roblox():
+    log("Starting Roblox launch operation")
+    try:
+
+        roblox_versions_dir = os.path.expandvars(r"%LOCALAPPDATA%\Roblox\Versions")
+        if not os.path.exists(roblox_versions_dir):
+            log("  Roblox Versions directory not found")
+            return False
+
+        version_dirs = [
+            d
+            for d in os.listdir(roblox_versions_dir)
+            if os.path.isdir(os.path.join(roblox_versions_dir, d))
+            and d.startswith("version-")
+        ]
+        if not version_dirs:
+            log("  No Roblox version directories found")
+            return False
+
+        latest_version = sorted(version_dirs)[-1]
+        roblox_exe_path = os.path.join(
+            roblox_versions_dir, latest_version, "RobloxPlayerBeta.exe"
+        )
+        if not os.path.exists(roblox_exe_path):
+            log(f"  RobloxPlayerBeta.exe not found in {latest_version}")
+            return False
+        log(f"  Launching Roblox from: {roblox_exe_path}")
+        subprocess.Popen([roblox_exe_path])
+        log("  Roblox launched successfully!")
+        return True
+    except Exception as e:
+        log(f"  Error launching Roblox: {e}")
+        log(f"Log open error: {e}")
+        return False
+
+
+# ===== ROBLOX OPERATIONS =====
+def get_roblox_settings(config=None):
+    log("Restarting network adapter")
+    try:
 
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        
-        # Determine which API to use based on config
-        use_past_versions = config and config.get("roblox", {}).get("use_past_versions", False) if config else False
-        
+
+        use_past_versions = (
+            config and config.get("roblox", {}).get("use_past_versions", False)
+            if config
+            else False
+        )
+
         if use_past_versions:
             version_url = "https://weao.xyz/api/versions/past"
             log(f"Fetching past version info from: {version_url}")
         else:
             version_url = "https://weao.xyz/api/versions/current"
             log(f"Fetching version info from: {version_url}")
-        
+
         headers = {"User-Agent": "WEAO-3PService/1.0"}
         response = requests.get(version_url, headers=headers, verify=False)
         response.raise_for_status()
         version_data = response.json()
         log("WEAO Version Response:")
         log(json.dumps(version_data, indent=2))
-        
-        # Handle different response formats
+
         if use_past_versions:
-            # For past versions API, get the last version from the list
             if isinstance(version_data, list) and version_data:
                 version_hash = version_data[-1].get("Windows", "")
                 if not version_hash:
@@ -440,11 +736,10 @@ def get_roblox_client_settings(config=None):
             else:
                 raise Exception("Invalid response format from past versions API")
         else:
-            # For current versions API (existing logic)
             version_hash = version_data.get("Windows", "")
             if not version_hash:
                 raise Exception("No Windows version found in WEAO response")
-        
+
         log(f"Found Windows version: {version_hash}")
         base_hash = version_hash.replace("version-", "")
         extract_roots = {
@@ -471,7 +766,6 @@ def get_roblox_client_settings(config=None):
             "extracontent-places.zip": "ExtraContent/places/",
         }
         log(f"Downloading {len(extract_roots)} required packages...")
-        from tqdm import tqdm
 
         target_dir = os.path.expandvars(
             r"%LOCALAPPDATA%\Roblox\Versions\\" + version_hash
@@ -486,7 +780,6 @@ def get_roblox_client_settings(config=None):
         os.makedirs(temp_dir, exist_ok=True)
         success_count = 0
         failed_packages = []
-        import sys
 
         with tqdm(
             total=len(extract_roots),
@@ -508,8 +801,16 @@ def get_roblox_client_settings(config=None):
                     temp_file = os.path.join(temp_dir, f"{unique_id}_{package}")
                     total_size = int(response.headers.get("content-length", 0))
                     with open(temp_file, "wb") as f:
+
                         class CustomProgressBar:
-                            def __init__(self, total, desc, package_index, total_packages, config=None):
+                            def __init__(
+                                self,
+                                total,
+                                desc,
+                                package_index,
+                                total_packages,
+                                config=None,
+                            ):
                                 self.total = total
                                 self.desc = desc
                                 self.current = 0
@@ -517,32 +818,68 @@ def get_roblox_client_settings(config=None):
                                 self.package_index = package_index
                                 self.total_packages = total_packages
                                 self.config = config
-                            
+
                             def update(self, chunk_size):
                                 self.current += chunk_size
-                                if self.current - self.last_update > 1024*1024 or self.current >= self.total:
-                                    percentage = (self.current / self.total) * 100 if self.total > 0 else 0
-                                    overall_percentage = ((self.package_index + (percentage / 100)) / self.total_packages) * 100
-                                    
+                                if (
+                                    self.current - self.last_update > 1024 * 1024
+                                    or self.current >= self.total
+                                ):
+                                    percentage = (
+                                        (self.current / self.total) * 100
+                                        if self.total > 0
+                                        else 0
+                                    )
+                                    overall_percentage = (
+                                        (self.package_index + (percentage / 100))
+                                        / self.total_packages
+                                    ) * 100
+
                                     bar_length = 50
                                     filled_length = int(bar_length * percentage / 100)
-                                    bar = '█' * filled_length + '░' * (bar_length - filled_length)
-                                    
-                                    overall_filled = int(bar_length * overall_percentage / 100)
-                                    overall_bar = '█' * overall_filled + '░' * (bar_length - overall_filled)
-                                    
-                                    print(f"\r{self.desc} {percentage:.1f}% |{bar}|\n\n  Total Progress {overall_percentage:.1f}% |{overall_bar}|", end="", flush=True)
-                                    title(self.config)
+                                    bar = "█" * filled_length + "░" * (
+                                        bar_length - filled_length
+                                    )
+
+                                    overall_filled = int(
+                                        bar_length * overall_percentage / 100
+                                    )
+                                    overall_bar = "█" * overall_filled + "░" * (
+                                        bar_length - overall_filled
+                                    )
+
+                                    print(
+                                        f"\r{self.desc} {percentage:.1f}% |{bar}|\n\n  Total Progress {overall_percentage:.1f}% |{overall_bar}|",
+                                        end="",
+                                        flush=True,
+                                    )
+                                    if self.config:
+                                        log(f"")
                                     self.last_update = self.current
-                            
+
                             def close(self):
                                 bar_length = 50
-                                overall_percentage = ((self.package_index + 1) / self.total_packages) * 100
-                                overall_filled = int(bar_length * overall_percentage / 100)
-                                overall_bar = '█' * overall_filled + '░' * (bar_length - overall_filled)
-                                print(f"\r{self.desc} 100.0% |{'█' * bar_length}|\n\n  Total Progress {overall_percentage:.1f}% |{overall_bar}|", flush=True)
-                        
-                        file_pbar = CustomProgressBar(total_size, f"  {package}", package_index, len(extract_roots), config)
+                                overall_percentage = (
+                                    (self.package_index + 1) / self.total_packages
+                                ) * 100
+                                overall_filled = int(
+                                    bar_length * overall_percentage / 100
+                                )
+                                overall_bar = "█" * overall_filled + "░" * (
+                                    bar_length - overall_filled
+                                )
+                                print(
+                                    f"\r{self.desc} 100.0% |{'█' * bar_length}|\n\n  Total Progress {overall_percentage:.1f}% |{overall_bar}|",
+                                    flush=True,
+                                )
+
+                        file_pbar = CustomProgressBar(
+                            total_size,
+                            f"  {package}",
+                            package_index,
+                            len(extract_roots),
+                            config,
+                        )
                         try:
                             for chunk in response.iter_content(chunk_size=8192):
                                 if chunk:
@@ -550,7 +887,6 @@ def get_roblox_client_settings(config=None):
                                     file_pbar.update(len(chunk))
                         finally:
                             file_pbar.close()
-                    import zipfile
 
                     try:
                         with zipfile.ZipFile(temp_file, "r") as zip_ref:
@@ -579,11 +915,10 @@ def get_roblox_client_settings(config=None):
                             operation="extract_package",
                             details={"package": package, "error": str(e)},
                         )
+                        log(f"ZIP extraction error: {e}")
                     try:
                         os.remove(temp_file)
                     except:
-                        import time
-
                         time.sleep(0.1)
                         try:
                             os.remove(temp_file)
@@ -643,298 +978,68 @@ def get_roblox_client_settings(config=None):
         return f"https://setup.roblox.com/version-{base_hash}"
     except DownloadError:
         raise
+        log("DownloadError caught in get_roblox_settings")
     except requests.RequestException as e:
         raise DownloadError(
             f"Network error while fetching Roblox client settings: {e}",
             operation="fetch_version_info",
             details={"url": version_url},
         )
+        log("Starting Roblox client download operation")
     except Exception as e:
         raise DownloadError(
             f"Unexpected error in get_roblox_client_settings: {e}",
             operation="get_roblox_client_settings",
             details={"error": str(e)},
         )
+        log(f"Network error in get_roblox_settings: {e}")
 
-
-def byebanasync(wait=True):
-    try:
-        log("\n" + "=" * 41)
-        log("ByeBanAsync v2.2 | credits to: centerepic")
-        log("=" * 41)
-
-        user_profile = os.environ.get("USERPROFILE")
-        if not user_profile:
-            log("[!!!] Could not get USERPROFILE environment variable.")
-            return
-        log("\n--- MAC Address Spoofing ---")
-        change_mac = (
-            input("[?] Do you want to attempt to change your MAC address? (y/n): ")
-            .strip()
-            .lower()
-        )
-        if change_mac == "y":
-            adapters = list_network_adapters()
-            if not adapters:
-                log("[!] No suitable network adapters found to modify.")
-            else:
-                log("\n[i] Available network adapters:")
-                for i, adapter in enumerate(adapters, 1):
-                    log(f"  [{i}] {adapter['description']}")
-                    log(f"     └─ Connection Name: '{adapter['connection_name']}'")
-
-                while True:
-                    try:
-                        choice = int(
-                            input("\n[?] Enter the number of the adapter to change: ")
-                        )
-                        if 1 <= choice <= len(adapters):
-                            selected_adapter = adapters[choice - 1]
-                            break
-                        else:
-                            log(
-                                "[!] Invalid selection. Please enter a number from the list."
-                            )
-                    except ValueError:
-                        log(
-                            "[!] Invalid selection. Please enter a number from the list."
-                        )
-
-                random_mac = generate_random_mac_address()
-                log(
-                    f"[>] Attempting to set MAC for adapter: '{selected_adapter['description']}' (ID: {selected_adapter['id']})..."
-                )
-                try:
-                    change_mac_address(selected_adapter["id"], random_mac)
-                    log("[√] Successfully updated registry for MAC address.")
-                    log(
-                        f"[>] Attempting to restart network adapter '{selected_adapter['connection_name']}' to apply changes..."
-                    )
-                    try:
-                        restart_network_adapter(selected_adapter["connection_name"])
-                        log(
-                            f"[√] Network adapter '{selected_adapter['connection_name']}' restarted. MAC address change should now be active."
-                        )
-                        log("[i] Verify with 'ipconfig /all' or 'getmac'.")
-                    except Exception as e:
-                        log(
-                            f"[!!!] Error restarting network adapter: {e}. You may need to do this manually or reboot."
-                        )
-                except Exception as e:
-                    log(f"[!!!] Error changing MAC address in registry: {e}")
-        else:
-            log("[i] Skipping MAC address change.")
-        log("\n[...] ByeBanAsync completed!")
-    except Exception as e:
-        log(f"[!!!] Error in ByeBanAsync: {e}")
-
-def generate_random_mac_address():
-    import random
-
-    mac_bytes = [0x02] + [random.randint(0, 255) for _ in range(5)]
-    return "".join(f"{byte:02X}" for byte in mac_bytes)
-
-def list_network_adapters():
-    try:
-        import winreg
-
-        adapters = []
-        with winreg.OpenKey(
-            winreg.HKEY_LOCAL_MACHINE,
-            r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}",
-        ) as class_key:
-            for i in range(10000):  
-
-                try:
-                    subkey_name = f"{i:04d}"
-                    with winreg.OpenKey(class_key, subkey_name) as adapter_key:
-                        try:
-                            driver_desc = winreg.QueryValueEx(
-                                adapter_key, "DriverDesc"
-                            )[0]
-                            net_cfg_instance_id = winreg.QueryValueEx(
-                                adapter_key, "NetCfgInstanceID"
-                            )[0]
-
-                            try:
-                                connection_path = f"SYSTEM\\CurrentControlSet\\Control\\Network\\{{4D36E972-E325-11CE-BFC1-08002BE10318}}\\{net_cfg_instance_id}\\Connection"
-                                with winreg.OpenKey(
-                                    winreg.HKEY_LOCAL_MACHINE, connection_path
-                                ) as conn_key:
-                                    connection_name = winreg.QueryValueEx(
-                                        conn_key, "Name"
-                                    )[0]
-                            except:
-                                connection_name = driver_desc
-
-                            desc_lower = driver_desc.lower()
-                            if not any(
-                                keyword in desc_lower
-                                for keyword in [
-                                    "virtual",
-                                    "loopback",
-                                    "bluetooth",
-                                    "wan miniport",
-                                    "tap-windows",
-                                    "pseudo",
-                                ]
-                            ):
-                                adapters.append(
-                                    {
-                                        "id": subkey_name,
-                                        "description": driver_desc,
-                                        "connection_name": connection_name,
-                                    }
-                                )
-                        except (FileNotFoundError, OSError):
-                            continue
-                except FileNotFoundError:
-                    break
-        return adapters
-    except ImportError:
-        log("[!!!] winreg module not available. Cannot list network adapters.")
-        return []
-    except Exception as e:
-        log(f"[!!!] Error listing network adapters: {e}")
-        return []
-
-def change_mac_address(adapter_id, mac_address):
-    try:
-        import winreg
-
-        path = f"SYSTEM\\CurrentControlSet\\Control\\Class\\{{4d36e972-e325-11ce-bfc1-08002be10318}}\\{adapter_id}"
-        with winreg.OpenKey(
-            winreg.HKEY_LOCAL_MACHINE, path, 0, winreg.KEY_WRITE
-        ) as adapter_key:
-            log(f"[>] Setting 'NetworkAddress' to '{mac_address}'")
-            winreg.SetValueEx(
-                adapter_key, "NetworkAddress", 0, winreg.REG_SZ, mac_address
-            )
-    except ImportError:
-        raise Exception("winreg module not available")
-    except Exception as e:
-        raise Exception(f"Registry error: {e}")
-
-def restart_network_adapter(connection_name):
-    import time
-
-    log(f"[>] Disabling adapter: '{connection_name}'")
-    disable_result = subprocess.run(
-        [
-            "netsh",
-            "interface",
-            "set",
-            "interface",
-            f"name={connection_name}",
-            "admin=disable",
-        ],
-        capture_output=True,
-        text=True,
-    )
-    if disable_result.returncode != 0:
-        error_msg = disable_result.stderr.strip()
-        raise Exception(f"Failed to disable network adapter. Netsh output: {error_msg}")
-    time.sleep(2)
-    log(f"[>] Enabling adapter: '{connection_name}'")
-    enable_result = subprocess.run(
-        [
-            "netsh",
-            "interface",
-            "set",
-            "interface",
-            f"name={connection_name}",
-            "admin=enable",
-        ],
-        capture_output=True,
-        text=True,
-    )
-    if enable_result.returncode != 0:
-        error_msg = enable_result.stderr.strip()
-        raise Exception(f"Failed to enable network adapter. Netsh output: {error_msg}")
-
-
-def run_command(cmd, capture_output=True, shell=False):
-    cmd_str = " ".join(cmd) if isinstance(cmd, list) else cmd
-    log(f"  🔧 Running command: {cmd_str}")
-    try:
-        if capture_output:
-            result = subprocess.run(cmd, capture_output=True, text=True, shell=shell)
-
-            if result.stdout and result.stdout.strip():
-                log(f"  📤 STDOUT: {result.stdout.strip()}")
-
-            if result.stderr and result.stderr.strip():
-                log(f"  📥 STDERR: {result.stderr.strip()}")
-        else:
-            result = subprocess.run(cmd, shell=shell)
-        if result.returncode == 0:
-            log(f"  ✅ Command completed successfully (exit code: {result.returncode})")
-        else:
-            log(f"  ⚠️  Command exited with code: {result.returncode}")
-        return result
-    except Exception as e:
-        log(f"  ❌ Error running command: {e}")
-        return None
-
-def open_log_async():
-    try:
-        run_command(f'notepad "{LP}"', capture_output=False, shell=True)
-    except Exception as e:
-        print(f"Error opening log: {e}")
-
-def launch_roblox():
-    try:
-
-        roblox_versions_dir = os.path.expandvars(r"%LOCALAPPDATA%\Roblox\Versions")
-        if not os.path.exists(roblox_versions_dir):
-            log("  ❌ Roblox Versions directory not found")
-            return False
-
-        version_dirs = [
-            d
-            for d in os.listdir(roblox_versions_dir)
-            if os.path.isdir(os.path.join(roblox_versions_dir, d))
-            and d.startswith("version-")
-        ]
-        if not version_dirs:
-            log("  ❌ No Roblox version directories found")
-            return False
-
-        latest_version = sorted(version_dirs)[-1]
-        roblox_exe_path = os.path.join(
-            roblox_versions_dir, latest_version, "RobloxPlayerBeta.exe"
-        )
-        if not os.path.exists(roblox_exe_path):
-            log(f"  ❌ RobloxPlayerBeta.exe not found in {latest_version}")
-            return False
-        log(f"  🚀 Launching Roblox from: {roblox_exe_path}")
-        subprocess.Popen([roblox_exe_path])
-        log("  ✅ Roblox launched successfully!")
-        return True
-    except Exception as e:
-        log(f"  ❌ Error launching Roblox: {e}")
-        return False
 
 def main():
-    config = load_config()
 
-    if not validate_config(config):
+    log("Starting Slate main function")
+    config = load_cfg()
+
+    if not validate_cfg(config):
         print("❌ Invalid configuration. Please fix the issues in slate.config.json")
         raise ConfigurationError(
             "Configuration validation failed",
             operation="validate_config",
-            details={"config": config}
+            details={"config": config},
         )
+
+    BANNER = r"""
+▐▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▌
+▐     ▄████████  ▄█          ▄████████     ███        ▄████████   ▌
+▐    ███    ███ ███         ███    ███ ▀█████████▄   ███    ███   ▌
+▐    ███    █▀  ███         ███    ███    ▀███▀▀██   ███    █▀    ▌
+▐    ███        ███         ███    ███     ███   ▀  ▄███▄▄▄       ▌
+▐  ▀███████████ ███       ▀███████████     ███     ▀▀███▀▀▀       ▌
+▐           ███ ███         ███    ███     ███       ███    █▄    ▌
+▐     ▄█    ███ ███▌    ▄   ███    ███     ███       ███    ███   ▌
+▐   ▄████████▀  █████▄▄██   ███    █▀     ▄████▀     ██████████   ▌
+▐               ▀                                                 ▌
+▐▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▌
+ by: midinterlude (logs can be found in %temp%\\slate\\slate.log)
+ """
+
+    def title(cfg=None, debug_mode=False):
+        if (
+            cfg
+            and cfg.get("general", {}).get("clear_screen_on_sections", False)
+            and not debug_mode
+        ):
+            os.system("cls")
+        print(BANNER)
 
     title(config)
     print(" Slate - Roblox Cleaning Tool")
 
-    global LOG, OPEN_LOG, LP, PROCS, PATHS, REGS
     LOG = config["general"]["log_enabled"]
     OPEN_LOG = config["general"]["open_log_on_exit"]
     PROCS = config["processes"]["roblox_processes"]
     PATHS = config["paths"]["temp_folders"] + config["paths"]["roblox_folders"]
-    REGS = config["registry"]["registry_paths"]
+    REGS = config["registry"]["roblox_keys"]
 
     if LOG:
         try:
@@ -1018,199 +1123,209 @@ def main():
     errors = []
     operation_start_time = {}
 
-    def log_operation_start(operation_name):
-        import time
+    def log_op_start(operation_name):
 
         operation_start_time[operation_name] = time.time()
-        log(f"🚀 Starting {operation_name}...")
+        log(f"Starting {operation_name}...")
 
-    def log_operation_end(operation_name, success=True, error_msg=None):
-        import time
+    def log_op_end(operation_name, success=True, error_msg=None):
 
         if operation_name in operation_start_time:
             duration = time.time() - operation_start_time[operation_name]
             if success:
-                log(f"✅ {operation_name} completed successfully in {duration:.2f}s")
+                log(f"{operation_name} completed successfully in {duration:.2f}s")
             else:
-                log(f"❌ {operation_name} failed after {duration:.2f}s: {error_msg}")
+                log(f"{operation_name} failed after {duration:.2f}s: {error_msg}")
 
     try:
         if config["cleaning"]["kill_processes"]:
-            log_operation_start("Process termination")
+            log_op_start("Process termination")
             for process in PROCS:
-                result = run_command(["taskkill", "/f", "/im", process])
+                result = run_cmd(["taskkill", "/f", "/im", process])
                 if result and result.returncode == 0:
-                    log(f"  ✅ Terminated: {process}")
+                    log(f"  Terminated: {process}")
                 else:
                     log(f"  - {process} not running or already terminated")
-            log_operation_end("Process termination")
+            log_op_end("Process termination")
         if config["cleaning"]["clean_folders"]:
-            log_operation_start("Folder cleaning")
+            log_op_start("Folder cleaning")
             try:
-                cleanfolders()
-                log_operation_end("Folder cleaning")
+                clean_folders()
+                log_op_end("Folder cleaning")
             except FileOperationError as e:
-                log_operation_end("Folder cleaning", False, str(e))
+                log_op_end("Folder cleaning", False, str(e))
                 errors.append(f"Folder cleaning failed: {e}")
-                log(f"🔍 Detailed error info: {e.details}")
+                log(f"Detailed error info: {e.details}")
         if config["cleaning"]["remove_cookies"]:
-            log_operation_start("Cookie removal")
+            log_op_start("Cookie removal")
             try:
-                removecookies()
-                log_operation_end("Cookie removal")
+                remove_cookies()
+                log_op_end("Cookie removal")
             except FileOperationError as e:
-                log_operation_end("Cookie removal", False, str(e))
+                log_op_end("Cookie removal", False, str(e))
                 errors.append(f"Cookie removal failed: {e}")
         if config["cleaning"]["flush_dns"]:
-            log_operation_start("DNS cache flush")
-            result = run_command(["ipconfig", "/flushdns"])
+            log_op_start("DNS cache flush")
+            result = run_cmd(["ipconfig", "/flushdns"])
             if result and result.returncode == 0:
-                log_operation_end("DNS cache flush")
+                log_op_end("DNS cache flush")
             else:
-                log_operation_end("DNS cache flush", False, "Command failed")
-                log("  ❌ Error flushing DNS cache")
+                log_op_end("DNS cache flush", False, "Command failed")
+                log("  Error flushing DNS cache")
                 errors.append("DNS flush failed")
         if config["general"]["clear_screen_on_sections"]:
             title(config)
         if config["cleaning"]["restart_explorer"]:
-            log_operation_start("Explorer restart")
+            log_op_start("Explorer restart")
             try:
-                run_command(["taskkill", "/f", "/im", "explorer.exe"])
-                log("  ✅ Explorer terminated")
-                run_command(["explorer.exe"])
-                log("  ✅ Explorer restarted")
-                log_operation_end("Explorer restart")
+                run_cmd(["taskkill", "/f", "/im", "explorer.exe"])
+                log("  Explorer terminated")
+                run_cmd(["explorer.exe"])
+                log("  Explorer restarted")
+                log_op_end("Explorer restart")
                 title(config)
             except ProcessError as e:
-                log_operation_end("Explorer restart", False, str(e))
+                log_op_end("Explorer restart", False, str(e))
                 errors.append(f"Explorer restart failed: {e}")
         if config["cleaning"]["clean_registry"]:
-            log_operation_start("Registry cleanup")
+            log_op_start("Registry cleanup")
             registry_errors = []
             for path in REGS:
-                result = run_command(["reg", "delete", path, "/f"])
+                result = run_cmd(["reg", "delete", path, "/f"])
                 if result and result.returncode == 0:
-                    log(f"  ✅ Deleted registry: {path}")
+                    log(f"  Deleted registry: {path}")
                 else:
                     log(f"  - Registry path not found or already deleted: {path}")
                     registry_errors.append(path)
             if registry_errors:
-                log_operation_end(
+                log_op_end(
                     "Registry cleanup",
                     False,
                     f"Some registry paths not found: {registry_errors}",
                 )
             else:
-                log_operation_end("Registry cleanup")
+                log_op_end("Registry cleanup")
             title(config)
         if config["cleaning"]["clean_prefetch"]:
-            log_operation_start("Prefetch cleanup")
+            log_op_start("Prefetch cleanup")
             prefetch_files = glob.glob(PF)
             if prefetch_files:
                 prefetch_errors = []
                 for file in prefetch_files:
                     try:
                         os.remove(file)
-                        log(f"  ✅ Removed prefetch: {os.path.basename(file)}")
+                        log(f"  Removed prefetch: {os.path.basename(file)}")
                     except Exception as e:
                         error_msg = f"Error removing prefetch file {file}: {e}"
                         prefetch_errors.append(error_msg)
-                        log(f"  ❌ {error_msg}")
+                        log(f"  {error_msg}")
                 if prefetch_errors:
-                    log_operation_end("Prefetch cleanup", False, f"Failed to remove {len(prefetch_errors)} files")
+                    log_op_end(
+                        "Prefetch cleanup",
+                        False,
+                        f"Failed to remove {len(prefetch_errors)} files",
+                    )
                 else:
-                    log_operation_end("Prefetch cleanup")
+                    log_op_end("Prefetch cleanup")
             else:
                 log("  - No prefetch files found")
-                log_operation_end("Prefetch cleanup")
+                log_op_end("Prefetch cleanup")
             title(config)
-        
+
         if config["tools"]["run_byebanasync"]:
-            log_operation_start("ByeBanAsync")
+            log_op_start("ByeBanAsync")
             try:
-                byebanasync(wait=True)
-                log_operation_end("ByeBanAsync")
+                bye_ban(wait=True)
+                log_op_end("ByeBanAsync")
             except (NetworkError, ProcessError) as e:
-                log_operation_end("ByeBanAsync", False, str(e))
+                log_op_end("ByeBanAsync", False, str(e))
                 errors.append(f"ByeBanAsync failed: {e}")
-                log(f"🔍 Detailed ByeBanAsync error info: {e.details}")
-        
+                log(f"Detailed ByeBanAsync error info: {e.details}")
+
         if config["roblox"]["download_roblox"]:
-            log_operation_start("Roblox client download")
+            log_op_start("Roblox client download")
             try:
-                rdd_url = get_roblox_client_settings(config)
-                log_operation_end("Roblox client download")
+                get_roblox_settings(config)
+                log_op_end("Roblox client download")
             except DownloadError as e:
-                log_operation_end("Roblox client download", False, str(e))
+                log_op_end("Roblox client download", False, str(e))
                 errors.append(f"Roblox download failed: {e}")
-                log(f"🔍 Detailed download error info: {e.details}")
+                log(f"Detailed download error info: {e.details}")
             except Exception as e:
-                log_operation_end("Roblox client download", False, str(e))
+                log_op_end("Roblox client download", False, str(e))
                 errors.append(f"Roblox download failed with unexpected error: {e}")
-        log("\n🎉 Cleaning complete!")
-        
+        log("\nCleaning complete!")
+
         if errors:
-            log("\n⚠️  Some operations reported issues:")
+            log("\nSome operations reported issues:")
             for i, e in enumerate(errors, 1):
                 log(f"   {i}. {e}")
 
         if config["advanced"]["auto_restart_after_cleaning"]:
             if OPEN_LOG and LOG:
-                log_thread = threading.Thread(target=open_log_async, daemon=True)
+                log_thread = threading.Thread(target=open_log, daemon=True)
                 log_thread.start()
-            run_command("shutdown /r /t 0", capture_output=False, shell=True)
+            run_cmd("shutdown /r /t 0", capture_output=False, shell=True)
         else:
             if config["roblox"]["launch_roblox_on_exit"]:
                 should_launch = True
                 if not config["advanced"]["skip_confirmation_prompts"]:
-                    launch_choice = input("\nDo you want to launch Roblox now? (confirm): ")
-                    should_launch = launch_choice.lower().strip() in ["confirm", "yes", "y"]
-                
+                    launch_choice = input(
+                        "\nDo you want to launch Roblox now? (confirm): "
+                    )
+                    should_launch = launch_choice.lower().strip() in [
+                        "confirm",
+                        "yes",
+                        "y",
+                    ]
+
                 if should_launch:
                     title(config)
-                    log_operation_start("Roblox launch")
+                    log_op_start("Roblox launch")
                     if launch_roblox():
-                        log_operation_end("Roblox launch")
-                        log("✅ Roblox is starting up!")
+                        log_op_end("Roblox launch")
+                        log("Roblox is starting up!")
                     else:
-                        log_operation_end("Roblox launch", False, "Launch failed")
-                        log("❌ Failed to launch Roblox automatically")
-                        log("   You can launch it manually from the Roblox Player shortcut")
+                        log_op_end("Roblox launch", False, "Launch failed")
+                        log("Failed to launch Roblox automatically")
+                        log(
+                            "   You can launch it manually from the Roblox Player shortcut"
+                        )
             log(
                 "\nExiting without restarting. (You may want to restart manually to ensure all changes take effect.)"
             )
             print(
-                "Thank you for using Slate! If you had any issues, please DM 'midinterlude' on Discord with the log file."
+                "Thank you for using Slate! If you had any issues, please DM 'midinterlude' on Discord with log file."
             )
 
             if LOG:
                 pass
             if not config["advanced"]["skip_confirmation_prompts"]:
-                auto_close_after_delay()
+                auto_close()
             if OPEN_LOG and LOG:
-                log_thread = threading.Thread(target=open_log_async, daemon=True)
+                log_thread = threading.Thread(target=open_log, daemon=True)
                 log_thread.start()
 
             os._exit(0)
     except KeyboardInterrupt:
-        log("\n⚠️  Operation cancelled by user")
+        log("\nOperation cancelled by user")
         print("\nOperation cancelled by user.")
-        auto_close_after_delay()
+        auto_close()
         os._exit(1)
     except SlateError as e:
-        log(f"\n❌ Slate error in {e.operation}: {e}")
-        log(f"🔍 Error details: {e.details}")
-        print(f"\n❌ Error in {e.operation}: {e}")
+        log(f"\nSlate error in {e.operation}: {e}")
+        log(f"Detailed error info: {e.details}")
+        print(f"\nError in {e.operation}: {e}")
         if config["general"]["log_enabled"]:
-            print(f"📋 Check log file for details: {LP}")
+            print(f"Check log file for details: {LP}")
     except Exception as e:
-        log(f"\n💥 Unexpected error: {e}")
-        import traceback
+        log(f"\nUnexpected error: {e}")
 
-        log(f"🔍 Full traceback: {traceback.format_exc()}")
-        print(f"\n💥 Unexpected error: {e}")
+        log(f"Full traceback: {traceback.format_exc()}")
+        print(f"\nUnexpected error: {e}")
         if config["general"]["log_enabled"]:
-            print(f"📋 Check log file for details: {LP}")
+            print(f"Check log file for details: {LP}")
+
 
 if __name__ == "__main__":
     try:
@@ -1219,4 +1334,3 @@ if __name__ == "__main__":
         print(f"Failed to start application: {e}")
         input("Press Enter to exit...")
         exit(1)
-
